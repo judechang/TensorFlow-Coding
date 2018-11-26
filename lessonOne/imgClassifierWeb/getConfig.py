@@ -1,6 +1,10 @@
 import configparser
+
+
 def get_config(config_file='config.ini'):
-    parser=configparser.ConfigParser()
+    # 读取config.ini 文本里面的参数设置,返回一个大的字典文件
+
+    parser = configparser.ConfigParser()
     parser.read(config_file)
     # get the ints, floats and strings
     _conf_ints = [(key, int(value)) for key, value in parser.items('ints')]

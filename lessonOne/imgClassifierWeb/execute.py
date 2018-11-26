@@ -8,7 +8,8 @@ import getConfig
 import sys
 gConfig = {}
 
-def read_data(dataset_path, im_dim, num_channels,num_files,images_per_file):
+
+def read_data(dataset_path, im_dim, num_channels, num_files,images_per_file):
         files_names = os.listdir(dataset_path)
         print(files_names)
           # 获取训练集中训练文件的名称
@@ -38,21 +39,22 @@ def read_data(dataset_path, im_dim, num_channels,num_files,images_per_file):
                 index = index + 1
         return dataset_array, dataset_labels  # 返回数据
 
+
 def unpickle_patch(file):
-    #打开文件，读取二进制文件，返回读取到的数据
+    # 打开文件，读取二进制文件，返回读取到的数据
     patch_bin_file = open(file, 'rb')
     patch_dict = pickle.load(patch_bin_file, encoding='bytes')#Loading the details of the binary file into a dictionary.
     return patch_dict
 
-def create_model(session,forward_only):
 
-    #用cnnModel实例化一个对象model
-    model=cnnModel.cnnModel(gConfig['percent'],gConfig['learning_rate'],gConfig['learning_rate_decay_factor'])
+def create_model(session,forward_only):
+    # 用cnnModel实例化一个对象model
+    model = cnnModel.cnnModel(gConfig['percent'],gConfig['learning_rate'],gConfig['learning_rate_decay_factor'])
     if 'pretrained_model'in gConfig:
         model.saver.restore(session,gConfig['pretrained_model'])
         return model
-    ckpt=tf.train.get_checkpoint_state(gConfig['working_directory'])
-    #判断是否已经有Model文件存在，如果model文件存在则加载原来的model并在原来的moldel继续训练，如果不存在则新建model相关文件
+    ckpt = tf.train.get_checkpoint_state(gConfig['working_directory'])
+    # 判断是否已经有Model文件存在，如果model文件存在则加载原来的model并在原来的moldel继续训练，如果不存在则新建model相关文件
     if ckpt and ckpt.model_checkpoint_path:
         print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
         model.saver.restore(session, ckpt.model_checkpoint_path)
@@ -66,15 +68,16 @@ def create_model(session,forward_only):
         session.run(tf.global_variables_initializer())
         graph = tf.get_default_graph()
         return model,graph
-#获取批量处理数据，考虑到配置不同，如果没有GPU建议将percent调小一点，即将训练集调小
-def get_batch(data,labels,percent):
+
+
+def get_batch(data, labels, percent):
+    # 获取批量处理数据，考虑到配置不同，如果没有GPU建议将percent调小一点，即将训练集调小
     num_elements = np.uint32(percent * data.shape[0] / 100)
     shuffled_labels = labels
     np.random.shuffle(shuffled_labels)
     return data[shuffled_labels[:num_elements], :, :, :], shuffled_labels[:num_elements]
 
 
-#定义训练函数
 def train():
     """使用BFC内存管理管理算法，tf.ConfigProto()用于GPU的管理，可以控制GPU的使用率
     #allow growth
@@ -93,12 +96,13 @@ def train():
     config = tf.ConfigProto()
     config.gpu_options.allocator_type = 'BFC'
 
-
     dataset_array, dataset_labels = read_data(dataset_path=gConfig['dataset_path'], im_dim=gConfig['im_dim'],
-                                            num_channels=gConfig['num_channels'],num_files=gConfig['num_files'],images_per_file=gConfig['images_per_file'])
+                                            num_channels=gConfig['num_channels'],num_files=gConfig['num_files'],
+                                              images_per_file=gConfig['images_per_file'])
 
-
-    dataset_array_test, dataset_labels_test = read_data(dataset_path=gConfig['dataset_test'], im_dim=gConfig['im_dim'], num_channels=gConfig['num_channels'],num_files=1,images_per_file=gConfig['images_per_file'])
+    dataset_array_test, dataset_labels_test = read_data(dataset_path=gConfig['dataset_test'], im_dim=gConfig['im_dim'],
+                                                        num_channels=gConfig['num_channels'],num_files=1,
+                                                        images_per_file=gConfig['images_per_file'])
     print("Size of data : ", dataset_array.shape)
     with tf.Session(config=config) as sess:
         model,_=create_model(sess,False)
@@ -107,18 +111,17 @@ def train():
         current_step = 0
         previous_correct = []
         
-        while model.learning_rate.eval()>gConfig['end_learning_rate']:
+        while model.learning_rate.eval() > gConfig['end_learning_rate']:
 
             shuffled_data, shuffled_labels = get_batch(data=dataset_array, labels=dataset_labels,
-                                                             percent=gConfig['percent'])
+                                                       percent=gConfig['percent'])
             #print(shuffled_data)
 
             shuffled_data_test, shuffled_labels_test = get_batch(data=dataset_array_test, labels=dataset_labels_test,
-                                                             percent=5*gConfig['percent'])
-
+                                                                 percent=5*gConfig['percent'])
 
             start_time = time.time()
-            step_correct=model.step(sess,shuffled_data,shuffled_labels,False)
+            step_correct = model.step(sess,shuffled_data,shuffled_labels,False)
             step_time += (time.time() - start_time) / gConfig['steps_per_checkpoint']
             accuracy += step_correct / gConfig['steps_per_checkpoint']
             current_step += 1
@@ -126,12 +129,12 @@ def train():
             # 达到一个训练模型保存点后，将模型保存下来
             if current_step % gConfig['steps_per_checkpoint'] == 0:
                 #如果超过三次预测正确率没有升高则改变学习率
-                if len(previous_correct) > 2 and accuracy == min(previous_correct[-3:]):
+                if len(previous_correct) > 2 and accuracy < min(previous_correct[-3:]):
                     sess.run(model.learning_rate_decay_op)
                 previous_correct.append(accuracy)
                 checkpoint_path = os.path.join(gConfig['working_directory'], "cnn.ckpt")
                 #saver=tf.train.Saver()
-                model.saver.save(sess, checkpoint_path,global_step=model.global_step)
+                model.saver.save(sess, checkpoint_path, global_step=model.global_step)
 
                 #sess.run(tf.global_variables_initializer())
                 #以下为增加模型在测试集上的准确率测试
@@ -152,7 +155,7 @@ def train():
                 
                 correct = np.array(np.where(softmax_predictions_ == shuffled_labels_test))
                 correct = correct.size
-                print("模型在测试集上的准确率为 : ", correct/(gConfig['percent']*gConfig['dataset_size']/100))
+                print("模型在测试集上的准确率为 : ", correct/(gConfig['percent']* gConfig['dataset_size']/100))
 
 
                 print("在", str(gConfig['percent'] *gConfig['dataset_size']/100),"个训练集上训练的准确率", ' : ', accuracy)
@@ -160,15 +163,18 @@ def train():
                 step_time, accuracy = 0.0,0.0
                 sys.stdout.flush()
 
+
 def init_session(sess,conf='config.ini'):
     global gConfig
     gConfig=getConfig.get_config(conf)
     model,graph=create_model(sess,True)
     return sess, model,graph
 
+
 def predict_line(sess,model,img,graph):
     predict_name=model.step(sess,img,img,graph,True)
     return predict_name
+
 
 if __name__=='__main__':
     if len(sys.argv) - 1:
@@ -176,7 +182,7 @@ if __name__=='__main__':
     else:
         # get configuration from config.ini
         gConfig = getConfig.get_config()
-    if gConfig['mode']=='train':
+    if gConfig['mode'] == 'train':
         train()
-    elif gConfig['mode']=='server':
+    elif gConfig['mode'] == 'server':
         print('Sever Usage:python3 app.py')

@@ -1,0 +1,6 @@
+model_checkpoint_path: "cnn.ckpt-260"
+all_model_checkpoint_paths: "cnn.ckpt-220"
+all_model_checkpoint_paths: "cnn.ckpt-230"
+all_model_checkpoint_paths: "cnn.ckpt-240"
+all_model_checkpoint_paths: "cnn.ckpt-250"
+all_model_checkpoint_paths: "cnn.ckpt-260"

@@ -1,7 +1,7 @@
 import flask
 import werkzeug
 import os
-import scipy.misc
+import imageio
 import tensorflow as tf
 import getConfig
 import execute
@@ -23,7 +23,7 @@ def CNN_predict():
     """
     global secure_filename
     # 从本地目录读取需要分类的图片
-    img = scipy.misc.imread(os.path.join(app.root_path, secure_filename))
+    img = imageio.imread (os.path.join(app.root_path, secure_filename))
 
     """
     校验图片格式
